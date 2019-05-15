@@ -4,10 +4,13 @@ table Word {
   translation:[string];
 }
 
+table KeyValue {
+  key:string(key);
+  value:Word;
+}
 
 table Dictionary {
-    keys:[string];
-    values:[Word];
+  entries:[KeyValue];
 }
 
 root_type Dictionary;

@@ -134,6 +134,92 @@ Word.endWord = function(builder) {
 /**
  * @constructor
  */
+function KeyValue() {
+  /**
+   * @type {flatbuffers.ByteBuffer}
+   */
+  this.bb = null;
+
+  /**
+   * @type {number}
+   */
+  this.bb_pos = 0;
+}
+
+/**
+ * @param {number} i
+ * @param {flatbuffers.ByteBuffer} bb
+ * @returns {KeyValue}
+ */
+KeyValue.prototype.__init = function(i, bb) {
+  this.bb_pos = i;
+  this.bb = bb;
+  return this;
+};
+
+/**
+ * @param {flatbuffers.ByteBuffer} bb
+ * @param {KeyValue=} obj
+ * @returns {KeyValue}
+ */
+KeyValue.getRootAsKeyValue = function(bb, obj) {
+  return (obj || new KeyValue).__init(bb.readInt32(bb.position()) + bb.position(), bb);
+};
+
+/**
+ * @param {flatbuffers.Encoding=} optionalEncoding
+ * @returns {string|Uint8Array|null}
+ */
+KeyValue.prototype.key = function(optionalEncoding) {
+  var offset = this.bb.__offset(this.bb_pos, 4);
+  return offset ? this.bb.__string(this.bb_pos + offset, optionalEncoding) : null;
+};
+
+/**
+ * @param {Word=} obj
+ * @returns {Word|null}
+ */
+KeyValue.prototype.value = function(obj) {
+  var offset = this.bb.__offset(this.bb_pos, 6);
+  return offset ? (obj || new Word).__init(this.bb.__indirect(this.bb_pos + offset), this.bb) : null;
+};
+
+/**
+ * @param {flatbuffers.Builder} builder
+ */
+KeyValue.startKeyValue = function(builder) {
+  builder.startObject(2);
+};
+
+/**
+ * @param {flatbuffers.Builder} builder
+ * @param {flatbuffers.Offset} keyOffset
+ */
+KeyValue.addKey = function(builder, keyOffset) {
+  builder.addFieldOffset(0, keyOffset, 0);
+};
+
+/**
+ * @param {flatbuffers.Builder} builder
+ * @param {flatbuffers.Offset} valueOffset
+ */
+KeyValue.addValue = function(builder, valueOffset) {
+  builder.addFieldOffset(1, valueOffset, 0);
+};
+
+/**
+ * @param {flatbuffers.Builder} builder
+ * @returns {flatbuffers.Offset}
+ */
+KeyValue.endKeyValue = function(builder) {
+  var offset = builder.endObject();
+  builder.requiredField(offset, 4); // key
+  return offset;
+};
+
+/**
+ * @constructor
+ */
 function Dictionary() {
   /**
    * @type {flatbuffers.ByteBuffer}
@@ -168,37 +254,19 @@ Dictionary.getRootAsDictionary = function(bb, obj) {
 
 /**
  * @param {number} index
- * @param {flatbuffers.Encoding=} optionalEncoding
- * @returns {string|Uint8Array}
+ * @param {KeyValue=} obj
+ * @returns {KeyValue}
  */
-Dictionary.prototype.keys = function(index, optionalEncoding) {
+Dictionary.prototype.entries = function(index, obj) {
   var offset = this.bb.__offset(this.bb_pos, 4);
-  return offset ? this.bb.__string(this.bb.__vector(this.bb_pos + offset) + index * 4, optionalEncoding) : null;
+  return offset ? (obj || new KeyValue).__init(this.bb.__indirect(this.bb.__vector(this.bb_pos + offset) + index * 4), this.bb) : null;
 };
 
 /**
  * @returns {number}
  */
-Dictionary.prototype.keysLength = function() {
+Dictionary.prototype.entriesLength = function() {
   var offset = this.bb.__offset(this.bb_pos, 4);
-  return offset ? this.bb.__vector_len(this.bb_pos + offset) : 0;
-};
-
-/**
- * @param {number} index
- * @param {Word=} obj
- * @returns {Word}
- */
-Dictionary.prototype.values = function(index, obj) {
-  var offset = this.bb.__offset(this.bb_pos, 6);
-  return offset ? (obj || new Word).__init(this.bb.__indirect(this.bb.__vector(this.bb_pos + offset) + index * 4), this.bb) : null;
-};
-
-/**
- * @returns {number}
- */
-Dictionary.prototype.valuesLength = function() {
-  var offset = this.bb.__offset(this.bb_pos, 6);
   return offset ? this.bb.__vector_len(this.bb_pos + offset) : 0;
 };
 
@@ -206,15 +274,15 @@ Dictionary.prototype.valuesLength = function() {
  * @param {flatbuffers.Builder} builder
  */
 Dictionary.startDictionary = function(builder) {
-  builder.startObject(2);
+  builder.startObject(1);
 };
 
 /**
  * @param {flatbuffers.Builder} builder
- * @param {flatbuffers.Offset} keysOffset
+ * @param {flatbuffers.Offset} entriesOffset
  */
-Dictionary.addKeys = function(builder, keysOffset) {
-  builder.addFieldOffset(0, keysOffset, 0);
+Dictionary.addEntries = function(builder, entriesOffset) {
+  builder.addFieldOffset(0, entriesOffset, 0);
 };
 
 /**
@@ -222,7 +290,7 @@ Dictionary.addKeys = function(builder, keysOffset) {
  * @param {Array.<flatbuffers.Offset>} data
  * @returns {flatbuffers.Offset}
  */
-Dictionary.createKeysVector = function(builder, data) {
+Dictionary.createEntriesVector = function(builder, data) {
   builder.startVector(4, data.length, 4);
   for (var i = data.length - 1; i >= 0; i--) {
     builder.addOffset(data[i]);
@@ -234,36 +302,7 @@ Dictionary.createKeysVector = function(builder, data) {
  * @param {flatbuffers.Builder} builder
  * @param {number} numElems
  */
-Dictionary.startKeysVector = function(builder, numElems) {
-  builder.startVector(4, numElems, 4);
-};
-
-/**
- * @param {flatbuffers.Builder} builder
- * @param {flatbuffers.Offset} valuesOffset
- */
-Dictionary.addValues = function(builder, valuesOffset) {
-  builder.addFieldOffset(1, valuesOffset, 0);
-};
-
-/**
- * @param {flatbuffers.Builder} builder
- * @param {Array.<flatbuffers.Offset>} data
- * @returns {flatbuffers.Offset}
- */
-Dictionary.createValuesVector = function(builder, data) {
-  builder.startVector(4, data.length, 4);
-  for (var i = data.length - 1; i >= 0; i--) {
-    builder.addOffset(data[i]);
-  }
-  return builder.endVector();
-};
-
-/**
- * @param {flatbuffers.Builder} builder
- * @param {number} numElems
- */
-Dictionary.startValuesVector = function(builder, numElems) {
+Dictionary.startEntriesVector = function(builder, numElems) {
   builder.startVector(4, numElems, 4);
 };
 
@@ -286,4 +325,5 @@ Dictionary.finishDictionaryBuffer = function(builder, offset) {
 
 // Exports for Node.js and RequireJS
 this.Word = Word;
+this.KeyValue = KeyValue;
 this.Dictionary = Dictionary;
