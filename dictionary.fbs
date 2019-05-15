@@ -1,0 +1,13 @@
+table Word {
+  frequency:long;
+  ipa:string;
+  translation:[string];
+}
+
+
+table Dictionary {
+    keys:[string];
+    values:[Word];
+}
+
+root_type Dictionary;
